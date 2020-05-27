@@ -1,5 +1,6 @@
-from tornado.iostream import IOStream       # 这句可以没有，只是作为参数的代码提示
+from tornado.iostream import IOStream, StreamClosedError       # IOStream可以没有，只是作为参数的代码提示
 from tornado.tcpserver import TCPServer
+import traceback
 
 class Connecter:
 
@@ -8,6 +9,8 @@ class Connecter:
     async def init(self, stream: IOStream, address: tuple):
         """
         注意这个不是构造方法，这里不用构造方法是为了方便后续的与web端相互通信
+        :param stream:      socket的数据流的通道
+        :param address:     客户端的 ip 和 id  (ip, id)
         """
         self.stream, self.address = stream, address
         self.clients.add(self)
@@ -19,14 +22,18 @@ class Connecter:
         """
         接受消息
         """
-        while True:
-            try:    # 因为异步的原因。可能设备离线后还在接收消息，所以try一下，不让错误打印出来，其实打印了错误也不影响程序运行
+        # while True:       # while True 是没有错的，但是感觉不够严谨
+        while not self.stream.closed():  # 此处改为IOStream没有关闭就继续循环
+            try:    
                 data = await self.stream.read_bytes(num_bytes=1024, partial=True)   # num_bytes:每次最多接收字节，partial:数据中断后视为接收完成
                 print(data)
                 from .src.socket_data_processing import SocketData
                 SocketData.msg = data.decode('utf8')
-            except:
+            except StreamClosedError as e:  # 因为异步的原因。可能设备离线后还在接收消息。
                 pass
+                # print(e)
+            except:
+                traceback.print_exc()  # 把其他错误打印出来
 
     def send(self, data:str):
         """

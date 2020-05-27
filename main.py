@@ -16,7 +16,12 @@ def main():
     app = webServerApp()
     app.listen(options.webPort, '0.0.0.0')
     print("web服务器启动，端口：{port}".format(port=options.webPort))
-    ioloop.IOLoop.current().start()
+    try:    # 此处修复不能使用一次Ctrl+C结束程序
+        print("按 Ctrl+C 可结束程序!")
+        ioloop.IOLoop.current().start()
+    except KeyboardInterrupt:   
+        ioloop.IOLoop.current().stop()
+        print("程序已经结束!")
 
 
 if __name__ == '__main__':
